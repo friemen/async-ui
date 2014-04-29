@@ -6,7 +6,7 @@ Here's a working [example](src/async_ui/ex_master_detail.clj).
 
 ## What it shows
 
- * A UI form with all it's state is represented by pure data.
+ * A UI form with all it's state represented by pure data.
  * Specification of UI forms and event processing is free of access to
    JavaFX APIs, and can therefore be tested without any GUI test robots.
  * Event processing and communication among UI forms is free of
@@ -116,7 +116,7 @@ An *Event* is a map with keys
 
  - :source   -- Points to a visual components property or other source
  - :type     -- A keyword denoting the type of event.
-             common event types are :update or :action
+             Common event types are :update or :action.
  - :payload  -- Arbitrary data
 
 
