@@ -90,7 +90,7 @@ visual component tree.
  - :setter-fns           -- A map of data-path to 1-arg functions used to update
                             visual component properties values
  - :validation-rule-set  -- A vector of validation rules (see examine library)
- - :validation-results   Current validation results (see examine library)
+ - :validation-results   -- Current validation results (see examine library)
 
 A view is created like so:
 
@@ -114,10 +114,10 @@ A view is created like so:
 
 An *Event* is a map with keys
 
- - :source   points to a visual components property or other source
- - :type     is a keyword denoting the type of event.
+ - :source   -- Points to a visual components property or other source
+ - :type     -- A keyword denoting the type of event.
              common event types are :update or :action
- - :payload  is arbitrary data
+ - :payload  -- Arbitrary data
 
 
 An *Event Handler* is a function that is invoked by the view process to
