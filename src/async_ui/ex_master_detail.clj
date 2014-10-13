@@ -1,5 +1,5 @@
 (ns async-ui.ex-master-detail
-  (:require [clojure.core.async :refer [go <! >!]]
+  (:require [clojure.core.async :refer [go <! >!] :as async]
             [examine.core :as e]
             [examine.constraints :as c]
             [async-ui.forml :refer :all]
@@ -11,7 +11,7 @@
 ;; TODOs
 ;; - Demonstrate testing support, event recording and play-back
 ;; - Simulate a long-running call
-;; - 1-arg setter-fn becomes 2-arg update-fn
+;; - 1-arg setter-fn should become 2-arg update-fn to improve performance
 
 ; ----------------------------------------------------------------------------
 ;; In the REPL:
@@ -81,7 +81,8 @@
                                :components
                                [(button "Add Item")
                                 (button "Edit Item")
-                                (button "Remove Item")])]))]
+                                (button "Remove Item")
+                                (button "Run Action")])]))]
     (-> (v/make-view "item-manager" spec)
         (assoc :mapping (v/make-mapping :item ["item" :text]
                                         :items ["items" :items]
@@ -100,14 +101,25 @@
         :data
         (let [data (:data view)]
           (case ((juxt :source :type) event)
+            
+            ["Calc" :finished]
+            (update-in data [:items] conj "Calc finished!")
+            
+            ["Run Action" :action]
+            (do (future
+                  (Thread/sleep 2000)
+                  (async/>!! (:events view) {:source "Calc" :type :finished}))
+                data)
+            
             ["Add Item" :action]
             (-> data
                 (update-in [:items] conj (:item data))
                 (assoc :item ""))
+            
             ["Edit Item" :action]
             (let [index (or (first (:selection data)) -1)]
               (if (not= index -1)
-                (let [items (:items data)
+                (let [items       (:items data)
                       editor-view (<! (v/run-view #'item-editor-view
                                                   #'item-editor-handler
                                                   {:text (nth items index)}))]
@@ -116,6 +128,7 @@
                       :items (replace-at items index [(-> editor-view :data :text)]))
                     data))
                 data))
+            
             ["Remove Item" :action]
             (assoc data
               :items (let [items (:items data)
