@@ -1,5 +1,5 @@
 (ns async-ui.javafx.binding
-  (:require [clojure.core.async :refer [go >!]]
+  (:require [clojure.core.async :refer [put!]]
             [async-ui.core :refer [make-event]])
   (:import [javafx.beans.value ChangeListener]
            [javafx.collections FXCollections ListChangeListener]
@@ -48,9 +48,9 @@
   [vc]
   (assoc (common-setter-fns vc)
     :selection #(without-listener vc [.getSelectionModel .getSelectedIndices] :selection-listener
-                                  (if (seq %)
-                                    (-> vc .getSelectionModel (.selectIndices (first %) (int-array (rest %))))
-                                    (-> vc .getSelectionModel (.selectIndices -1 (int-array [])))))
+                                  (-> vc
+                                      (.getSelectionModel)
+                                      (.selectIndices (or (first %) -1) (int-array (rest %)))))
     :items #(without-listener vc [.getSelectionModel .getSelectedIndices] :selection-listener
                               (.setItems vc (FXCollections/observableArrayList %)))))
 
@@ -85,16 +85,16 @@
   (.setOnAction vc
                 (reify EventHandler
                   (handle [_ evt]  
-                    (go (>! events-chan (make-event (.getId vc) :action)))))))
+                    (put! events-chan (make-event (.getId vc) :action))))))
 
 (defmethod bind! ListView
   [vc events-chan]
   (let [l (reify ListChangeListener
             (onChanged [_ _]
-              (go (>! events-chan (make-event (.getId vc)
-                                              :selection
-                                              :update
-                                              (-> vc .getSelectionModel .getSelectedIndices vec))))))]
+              (put! events-chan (make-event (.getId vc)
+                                            :selection
+                                            :update
+                                            (-> vc .getSelectionModel .getSelectedIndices vec)))))]
     (-> vc .getSelectionModel .getSelectedIndices (.addListener l))
     (-> vc .getProperties (.put :selection-listener l))))
 
@@ -109,12 +109,12 @@
   (let [window-id (-> vc .getScene .getRoot .getProperties (.get :window-id))]
     (-> vc (.setOnCloseRequest (reify EventHandler
                                  (handle [_ evt]
-                                   (go (>! events-chan (make-event window-id :close)))))))))
+                                   (put! events-chan (make-event window-id :close))))))))
 
 (defmethod bind! TextField
   [vc events-chan]
   (let [l (reify ChangeListener
             (changed [_ prop ov nv]
-              (go (>! events-chan (make-event (.getId vc) :text :update nv)))))]
+              (put! events-chan (make-event (.getId vc) :text :update nv))))]
     (-> vc .textProperty (.addListener l))
     (-> vc .getProperties (.put :text-listener l))))

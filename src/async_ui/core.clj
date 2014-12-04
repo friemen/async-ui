@@ -1,5 +1,5 @@
 (ns async-ui.core
-  (:require [clojure.core.async :as async :refer [go <! close!]]
+  (:require [clojure.core.async :as async :refer [go go-loop put! <! >! close!]]
             [parsargs.core :as p]
             [examine.core :as e]))
 
@@ -7,18 +7,22 @@
 ; ------------------------------------------------------------------------------
 ;; Utilities
 
-(def logging-on true)
+(def logging-on false)
 
 (defn log [& xs] (when logging-on (apply println xs)) (last xs))
 
-(defn as-vector [x] (if (vector? x) x (if (coll? x) (vec x) (vector x))))
+(defn as-vector [x]
+  (cond
+   (vector? x) x
+   (coll? x)  (vec x)
+   :else (vector x)))
 
 ; ------------------------------------------------------------------------------
 ;; Global state
 
 (defonce views (atom {}))
 
-(defonce channel (async/chan))
+(defonce tk-ch (atom nil))
 
 
 ; ------------------------------------------------------------------------------
@@ -174,15 +178,15 @@
                                      [key setter-fn] (update-fns vc)]
                                  [(conj cpath key) setter-fn]))]
     (into {}
-          (for [{data-path :data-path
-                 property-path :property-path
-                 formatter-fn :formatter} mapping]
+          (for [{:keys [data-path property-path formatter]}  mapping]
             (if-let [setter-fn (find-by-path setter-fn-map property-path)]
-              [data-path
-               (fn set-value! [data]
-                 (let [v (get-in data (as-vector data-path))]
-                   (log "run-tk: Set data" v "from" data-path)
-                   (-> v formatter-fn setter-fn)))])))))
+              [data-path (fn set-value! [old-data data]
+                           (let [data-path (as-vector data-path)
+                                 old-value (get-in old-data data-path)
+                                 new-value (get-in data data-path)]
+                             (when (not= old-value new-value)
+                               (log "run-tk: Set data" new-value "from" data-path)
+                               (-> new-value formatter setter-fn))))])))))
 
 
 ; ----------------------------------------------------------------------------
@@ -214,17 +218,14 @@
 (defn- update-data-in-vc-tree!
   "Calls all update functions in the view to put the views data
   into the visual component tree."
-  [view]
-  {:pre [(:data view)
-         (:id view)
-         (:setter-fns view)]}
-  (let [old-data (-> @views (get (:id view)) :data)
-        new-data (:data view)]
-    (when (or (:rebuild view) (not= old-data new-data))
-      (log "run-tk: Updating data in visual components of" (:id view)  ": " new-data)
-      (doseq [setter (-> view :setter-fns vals)]
-        (-> view :data setter)))
-    (dissoc view :rebuild)))
+  [current-view {:keys [id setter-fns data] :as new-view}]
+  {:pre [id data setter-fns]}
+  (let [old-data (:data current-view)]
+    (when (or (:rebuild new-view) (not= old-data data))
+      (log "run-tk: Updating data in visual components of" id  ": " data)
+      (doseq [setter (vals setter-fns)]
+        (setter old-data data)))
+    (dissoc new-view :rebuild)))
 
 
 (defn- display-validation-results!
@@ -234,10 +235,10 @@
   {:pre [(:mapping view)
          (:validation-results view)
          (:vc view)]}
-  (let [msg-map (into {}
-                      (for [{data-path :data-path property-path :property-path} (:mapping view),
-                            :let [msgs (-> view :validation-results e/messages (get data-path))]]
-                        [property-path msgs]))
+  (let [msg-map  (into {}
+                       (for [{data-path :data-path property-path :property-path} (:mapping view),
+                             :let [msgs (-> view :validation-results e/messages (get data-path))]]
+                         [property-path msgs]))
         comp-map (component-map tk (:vc view))]
     (doseq [[property-path msgs] msg-map]
       (set-vc-error! tk
@@ -248,35 +249,50 @@
 
 (defn- synchronize-ui!
   "Creates and updates or removes the view."
-  [tk view]
-  {:pre [(:id view)
-         (:events view)]}
+  [tk current-view new-view]
+  {:pre [(:id new-view)
+         (:events new-view)]}
   (run-now tk
            (fn []
-             (if (:terminated view)
-               (swap! views dissoc (:id (shutdown-view! tk view)))
-               (swap! views assoc (:id view) (->> view
-                                                  (create-vc-tree! tk)
-                                                  update-data-in-vc-tree!
-                                                  (display-validation-results! tk)))))))
+             (if (:terminated new-view)
+               (swap! views dissoc (:id (shutdown-view! tk new-view)))
+               (swap! views assoc (:id new-view) (->> new-view
+                                                      (create-vc-tree! tk)
+                                                      (update-data-in-vc-tree! current-view)
+                                                      (display-validation-results! tk)))))))
 
 
 (defn run-tk
   "Asynchronous process that waits for a view on the toolkit channel 
   and synchronizes it's state with the UI toolkit."
   [tk]
-  (go (try (while true
-             (let [view-msg (<! channel)
-                   view-id (log "run-tk: Got view" (:id view-msg))
-                   current-view (get @views view-id)
-                   new-view (assoc (merge current-view view-msg)
-                              :vc (:vc current-view)
-                              :setter-fns (:setter-fns current-view))]
-               (synchronize-ui! tk new-view)))
-           (catch Exception ex
-             (.printStackTrace ex)))
-      (log "run-tk: Terminated")))
+  (if-not @tk-ch
+    (do
+      (reset! tk-ch (async/chan))
+      (go-loop []
+        (try (let [view-msg  (<! @tk-ch)]
+               (if-not (= :quit view-msg)
+                 (do (try (let [view-id      (log "run-tk: Got view" (:id view-msg))
+                                current-view (get @views view-id)
+                                new-view     (assoc (merge current-view view-msg)
+                                               :vc         (:vc current-view)
+                                               :setter-fns (:setter-fns current-view))]
+                            (synchronize-ui! tk current-view new-view))
+                          (catch Exception ex
+                            (.printStackTrace ex)))
+                     (recur))
+                 (do (log "run-tk: Quit")
+                     (close! @tk-ch)
+                     (reset! tk-ch nil)
+                     :quit)))))
+      (log "run-tk: Started"))
+    (log "run-tk: Already running")))
 
+
+(defn stop-tk
+  []
+  (when @tk-ch
+    (put! @tk-ch :quit)))
 
 ; ----------------------------------------------------------------------------
 ;; View process
@@ -319,13 +335,13 @@
   (add-watch view-factory-var
              :rebuild
              (fn [k r o new-factory]
-               (go (>! channel (let [new-view (new-factory initial-data)
-                                     old-view (@views (:id new-view))]
-                                 (assoc new-view
-                                     :rebuild true
-                                     :events (:events old-view)
-                                     :vc (:vc old-view)
-                                     :data (:data old-view))))))))
+               (put! @tk-ch (let [new-view (new-factory initial-data)
+                                 old-view (@views (:id new-view))]
+                             (assoc new-view
+                               :rebuild true
+                               :events (:events old-view)
+                               :vc (:vc old-view)
+                               :data (:data old-view)))))))
 
 (defn run-view
   "Asynchronous process that waits for events on the views :events channel,
@@ -333,19 +349,19 @@
   by the handler-fn-var), and finally pushes the resulting view onto the central 
   toolkit channel."
   [view-factory-var handler-fn-var initial-data]
+  {:pre [@tk-ch]}
   (install-automatic-rebuild! view-factory-var initial-data)
-  (go (try (loop [view (@view-factory-var initial-data)]
-             (let [view-id (:id view)]
-               (>! channel view)
-               (when-not (:terminated view)
-                 (let [event (log "run-view" view-id ": Got event" (<! (:events view)))
-                       new-view (<! (@handler-fn-var (update-view view event) event))]
-                   (log "run-view" view-id
-                        "Data" (:data new-view)
-                        "Validation Result" (e/messages (:validation-results new-view)))
-                   (recur new-view)))
-               (log "run-view" view-id ": Terminating process")
-               (remove-watch view-factory-var :rebuild)
-               view))
-           (catch Exception ex
-             (.printStackTrace ex)))))
+  (go-loop [view (@view-factory-var initial-data)]
+    (let [view-id (:id view)]
+      (>! @tk-ch view)
+      (if-not (:terminated view)
+        (let [event (log "run-view" view-id ": Got event" (<! (:events view)))
+              new-view (<! (@handler-fn-var (update-view view event) event))]
+          (log "run-view" view-id
+               "Data" (:data new-view)
+               "Validation Result" (e/messages (:validation-results new-view)))
+          (recur new-view))
+        (do
+          (log "run-view" view-id ": Terminating process")
+          (remove-watch view-factory-var :rebuild)
+          view)))))

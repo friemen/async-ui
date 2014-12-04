@@ -4,26 +4,32 @@
             [examine.constraints :as c]
             [async-ui.forml :refer :all]
             [async-ui.core :as v]
-            [async-ui.javafx.tk :as tk]))
+            [async-ui.javafx.tk :as javafx]
+            [async-ui.swing.tk :as swing]))
 
 
 ; ----------------------------------------------------------------------------
 ;; TODOs
-;; - Demonstrate testing support, event recording and play-back
-;; - Simulate a long-running call
-;; - 1-arg setter-fn should become 2-arg update-fn to improve performance
+;; - Demonstrate testing support with event recording and play-back
+;; - Check layouting (currently it's too small)
+;; - Validation message display
+;; - Modality between windows
 
 ; ----------------------------------------------------------------------------
 ;; In the REPL:
 ;; Compile this namespace.
 
-;; Run this snippet
+;; Run this snippet with JavaFX
+#_ (do (ns async-ui.ex-master-detail) (start!))
+
+
+;; To just start the toolkit process with JavaFX
 #_(do
   (ns async-ui.ex-master-detail)
-  (def t (tk/make-toolkit))
-  (v/run-tk t))
+  (def javafx-tk (javafx/make-toolkit))
+  (v/run-tk javafx-tk))
 
-;; Start process for master view
+;; Start only process for master view
 #_(v/run-view #'item-manager-view
               #'item-manager-handler
               {:item ""
@@ -33,6 +39,9 @@
 #_(v/run-view #'item-editor-view
               #'item-editor-handler
               {:text "Foo"})
+
+;; Terminate Toolkit process
+(v/stop-tk)
 
 
 ; ----------------------------------------------------------------------------
@@ -58,6 +67,7 @@
   (go (case ((juxt :source :type) event)
         ["OK" :action]
         (assoc view :terminated true)
+        
         ["Cancel" :action]
         (assoc view
           :terminated true
@@ -91,9 +101,9 @@
 
 (defn replace-at
   [xs n ys]
-  (concat (take n xs)
-          ys
-          (drop (inc n) xs)))
+  (vec (concat (take n xs)
+               ys
+               (drop (inc n) xs))))
 
 (defn item-manager-handler
   [view event]
@@ -117,10 +127,10 @@
                 (assoc :item ""))
             
             ["Edit Item" :action]
-            (let [index (or (first (:selection data)) -1)]
-              (if (not= index -1)
-                (let [items       (:items data)
-                      editor-view (<! (v/run-view #'item-editor-view
+            (let [index (or (first (:selection data)) -1)
+                  items (:items data)]
+              (if (and (not= index -1) (< index (count items)))
+                (let [editor-view (<! (v/run-view #'item-editor-view
                                                   #'item-editor-handler
                                                   {:text (nth items index)}))]
                   (if-not (:cancelled editor-view)
@@ -133,8 +143,23 @@
             (assoc data
               :items (let [items (:items data)
                            index (or (first (:selection data)) -1)]
-                       (if (not= index -1)
+                       (if (and (not= index -1) (< index (count items)))
                          (replace-at items index [])
                          items)))
             data)))))
+
+
+
+; ----------------------------------------------------------------------------
+;; Startup
+
+
+(defn start!
+  []
+  (v/run-tk (javafx/make-toolkit))
+  (v/run-view #'item-manager-view
+              #'item-manager-handler
+              {:item ""
+               :items (vec (take 100 (repeatedly #(rand-nth ["Foo" "Bar" "Baz"]))))}))
+
 

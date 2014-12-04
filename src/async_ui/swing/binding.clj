@@ -1,5 +1,5 @@
 (ns async-ui.swing.binding
-  (:require [clojure.core.async :refer [go >!]]
+  (:require [clojure.core.async :refer [put!]]
             [async-ui.core :refer [make-event]])
   (:import [javax.swing JButton JComponent JFrame JLabel JList JPanel JTextField]
            [javax.swing.text JTextComponent]
@@ -107,7 +107,7 @@
   [vc events-chan]
   (.addActionListener vc (reify ActionListener
                            (actionPerformed [_ _]
-                             (go (>! events-chan (make-event (.getName vc) :action)))))))
+                             (put! events-chan (make-event (.getName vc) :action))))))
 
 (defmethod bind! JFrame
   [vc events-chan]
@@ -115,7 +115,7 @@
           (reify WindowListener
             (windowOpened [_ _])
             (windowClosing [_ _]
-              (go (>! events-chan (make-event (.getName vc) :close))))
+              (put! events-chan (make-event (.getName vc) :close)))
             (windowActivated [_ _])
             (windowDeactivated [_ _])
             (windowClosed [_ _]))))
@@ -126,7 +126,7 @@
   (let [l (reify ListSelectionListener
             (valueChanged [_ evt]
               (when-not (.getValueIsAdjusting evt)
-                (go (>! events-chan (make-event (.getName vc) :selection :update [(.getSelectedIndex vc)]))))))]
+                (put! events-chan (make-event (.getName vc) :selection :update [(.getSelectedIndex vc)])))))]
     (doto vc
       (.addListSelectionListener l)
       (.putClientProperty :listener l))))
@@ -148,11 +148,11 @@
   [vc events-chan]
   (let [l (reify DocumentListener
          (insertUpdate [_ evt]
-           (go (>! events-chan (make-event (.getName vc) :text :update (text-from-event evt)))))
+           (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))
          (removeUpdate [_ evt]
-           (go (>! events-chan (make-event (.getName vc) :text :update (text-from-event evt)))))
+           (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))
          (changedUpdate [_ evt]
-           (go (>! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))))]
+           (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt)))))]
     (-> vc
         .getDocument
         (.addDocumentListener l))

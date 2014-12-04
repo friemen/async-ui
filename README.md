@@ -167,6 +167,14 @@ A *Toolkit* provides uniform access to functionalities of Swing or JavaFX.
   Empty msgs remove the error state."))
 ```
 
+## Usage
+
+* Make sure you're on JDK 1.8.0_25.
+* Clone this project
+* Open the file `src/async_ui/ex_master_detail.clj` and compile it
+* `(do (ns async-ui.ex-master-detail) (start!))`
+
+
 ## License
 
 Copyright 2014 F.Riemenschneider
