@@ -11,7 +11,6 @@
 ; ----------------------------------------------------------------------------
 ;; TODOs
 ;; - Demonstrate testing support with event recording and play-back
-;; - Check layouting (currently it's too small)
 ;; - Validation message display
 ;; - Modality between windows
 

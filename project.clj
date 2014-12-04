@@ -8,7 +8,9 @@
                  [metam/core "1.0.5"]
                  [parsargs "1.2.0"]
                  [examine "1.2.0"]
-                 ; Swing
-                 [com.miglayout/miglayout-swing "4.2"]
-                 ; JavaFX
-                 [com.miglayout/miglayout-javafx "4.2"]])
+                 ;; Swing
+                 [com.miglayout/miglayout-swing "5.0-SNAPSHOT"]
+                 ;; JavaFX
+                 [com.miglayout/miglayout-javafx "5.0-SNAPSHOT"]]
+  :repositories [["sonatype" {:url "https://oss.sonatype.org/content/repositories/snapshots"
+                              :snapshots true}]])
