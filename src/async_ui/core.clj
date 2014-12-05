@@ -86,15 +86,16 @@
 ;;  - :parser         a function converting a human readable text to a value
 
 (def ^:private mapping-parser 
-             (p/some
-                (p/sequence :data-path (p/alternative
-                                        (p/value vector?)
-                                        (p/value keyword?))
-                            :property-path (p/value #(and (vector? %)
-                                                          (every? string? (drop-last %))
-                                                          (keyword? (last %))))            
-                            :formatter (p/optval fn? identity)
-                            :parser (p/optval fn? identity))))
+  (p/some
+   (p/sequence :data-path (p/alternative
+                           (p/value vector?)
+                           (p/value keyword?))
+               :property-path (p/value #(and (vector? %)
+                                             (every? string? (drop-last %))
+                                             (keyword? (last %))))            
+               :formatter (p/optval fn? identity)
+               :parser (p/optval fn? identity))))
+
 
 (defn make-mapping
   "Returns a new Mapping vector from the arguments.

@@ -18,7 +18,7 @@
 ;; In the REPL:
 ;; Compile this namespace.
 
-;; Run this snippet with JavaFX
+;; Run this snippet to start master with JavaFX
 #_ (do (ns async-ui.ex-master-detail) (start!))
 
 
@@ -40,7 +40,7 @@
               {:text "Foo"})
 
 ;; Terminate Toolkit process
-(v/stop-tk)
+#_(v/stop-tk)
 
 
 ; ----------------------------------------------------------------------------

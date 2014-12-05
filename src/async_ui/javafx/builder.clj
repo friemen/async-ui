@@ -48,7 +48,10 @@
 
 (defmethod build :default
   [spec]
-  (throw (IllegalArgumentException. (str "Cannot build type '" (metatype spec) "'"))))
+  (throw (IllegalArgumentException.
+          (str "Cannot build type '"
+               (metatype spec)
+               "'. Did you implement a build method for this type?"))))
 
 
 (defmethod build ::f/button
@@ -71,6 +74,19 @@
 (defmethod build ::f/panel
   [spec]
   (make-panel spec))
+
+
+(defmethod build ::f/table
+  [spec]
+  (let [t    (make TableView spec)
+        cols (.getColumns t)]
+    (doseq [{:keys [title getter]} (:columns spec)]
+      (let [tc (TableColumn. title)]
+        (.setCellValueFactory tc (reify Callback
+                                   (call [_ p]
+                                     (ReadOnlyObjectWrapper. (-> p .getValue getter)))))
+        (.add cols tc)))
+    t))
 
 
 (defmethod build ::f/textfield
