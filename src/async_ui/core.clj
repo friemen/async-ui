@@ -92,7 +92,7 @@
                            (p/value keyword?))
                :property-path (p/value #(and (vector? %)
                                              (every? string? (drop-last %))
-                                             (keyword? (last %))))            
+                                             (keyword? (last %))))
                :formatter (p/optval fn? identity)
                :parser (p/optval fn? identity))))
 

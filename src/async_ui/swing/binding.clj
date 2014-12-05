@@ -1,7 +1,7 @@
 (ns async-ui.swing.binding
   (:require [clojure.core.async :refer [put!]]
             [async-ui.core :refer [make-event]])
-  (:import [javax.swing JButton JComponent JFrame JLabel JList JPanel JTextField]
+  (:import [javax.swing JButton JComponent JFrame JLabel JList JPanel JTable JTextField]
            [javax.swing.text JTextComponent]
            [java.awt Container]
            [java.awt.event ActionListener WindowListener]
@@ -64,9 +64,18 @@
                   (.addListSelectionListener vc l))
     :items (partial set-list-items! vc)))
 
+
 (defmethod setter-fns JPanel
   [vc]
   (common-setter-fns vc))
+
+
+(defmethod setter-fns JTable
+  [vc]
+  (assoc (common-setter-fns vc)
+    :items #(do (.putClientProperty vc :data %)
+                (.repaint vc))))
+
 
 (defn- set-text!
   "Silently sets the text property of a text component,
@@ -80,6 +89,7 @@
       (.setText vc text)
       (.addDocumentListener doc l)
       (.setCaretPosition vc (min (count text) p)))))
+
 
 (defmethod setter-fns JTextComponent
   [vc]
@@ -99,15 +109,18 @@
   (fn [vc events-chan]
     (class vc)))
 
+
 (defmethod bind! :default
   [vc events-chan]
   nil)
+
 
 (defmethod bind! JButton
   [vc events-chan]
   (.addActionListener vc (reify ActionListener
                            (actionPerformed [_ _]
                              (put! events-chan (make-event (.getName vc) :action))))))
+
 
 (defmethod bind! JFrame
   [vc events-chan]
@@ -120,6 +133,7 @@
             (windowDeactivated [_ _])
             (windowClosed [_ _]))))
   (bind! (.getContentPane vc) events-chan))
+
 
 (defmethod bind! JList
   [vc events-chan]

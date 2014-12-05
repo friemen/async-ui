@@ -4,7 +4,7 @@
             [async-ui.swing.builder :refer [build]])
   (:import [async_ui.core Toolkit]
            [java.awt Color Container]
-           [javax.swing JFrame JPanel SwingUtilities]))
+           [javax.swing JComponent JFrame JPanel JScrollPane SwingUtilities]))
 
 
 (defrecord SwingToolkit []
@@ -23,23 +23,27 @@
     (assoc view
       :setter-fns (v/setter-map tk (:vc view) b/setter-fns (:mapping view))))
   (vc-children [tk vc]
-    (condp = (class vc)
-      JFrame [(.getContentPane vc)]
-      JPanel (.getComponents vc)
-      []))
+    (map #(if (instance? JScrollPane %)
+            (-> % .getViewport .getView)
+            %)
+         (condp = (class vc)
+           JFrame       [(.getContentPane vc)]
+           JPanel       (.getComponents vc)
+           [])))
   (vc-name [tk vc]
     (.getName vc))
   (set-vc-error! [tk vc msgs]
-    (if (seq msgs)
-      (doto vc
-        (if-not (.getClientProperty vc :background-color)
-          (.putClientProperty vc :background-color (.getBackground vc)))
-        (.setBackground Color/RED)
-        (.setToolTipText (apply str msgs)))
-      (if-let [bgc (.getClientProperty vc :background-color)]
+    (when (instance? JComponent vc)
+      (if (seq msgs)
         (doto vc
-          (.setBackground bgc)
-          (.setToolTipText nil))))))
+          (if-not (.getClientProperty vc :background-color)
+            (.putClientProperty vc :background-color (.getBackground vc)))
+          (.setBackground Color/RED)
+          (.setToolTipText (apply str msgs)))
+        (if-let [bgc (.getClientProperty vc :background-color)]
+          (doto vc
+            (.setBackground bgc)
+            (.setToolTipText nil)))))))
 
 (defn make-toolkit
   []

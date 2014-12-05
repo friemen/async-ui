@@ -2,7 +2,8 @@
   (:require [clojure.core.async :refer [go <! >!] :as async]
             [async-ui.forml :refer :all]
             [async-ui.core :as v]
-            [async-ui.javafx.tk :as javafx]))
+            [async-ui.javafx.tk :as javafx]
+            [async-ui.swing.tk :as swing]))
 
 
 
