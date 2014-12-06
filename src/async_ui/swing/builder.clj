@@ -42,8 +42,11 @@
 
 (defmethod build ::f/listbox
   [spec]
-  (doto (make JList spec)
-    (.setModel (DefaultListModel.))))
+  (let [l  (make JList spec)
+        sp (JScrollPane. l)]
+    (doto l
+      (.setModel (DefaultListModel.)))
+    sp))
 
 
 (defmethod build ::f/panel
@@ -52,7 +55,7 @@
             (.setLayout (MigLayout. (:lygeneral spec) (:lycols spec) (:lyrows spec))))]
     (doseq [child (:components spec)]
       (let [vc (build child)]
-        (.add p (or (.getClientProperty vc :wrapper) vc) (:lyhint child))))
+        (.add p vc (:lyhint child))))
     p))
 
 
@@ -64,7 +67,6 @@
         sp   (JScrollPane. t)
         cols (:columns spec)]
     (doto t
-      (.putClientProperty :wrapper sp)
       (.setColumnModel (table-column-model (-> spec :columns)))
       (.setAutoCreateColumnsFromModel false)
       (.setModel (reify TableModel
@@ -86,7 +88,8 @@
                    (setValueAt [_ row column v]
                      nil)
                    (addTableModelListener [_ l])
-                   (removeTableModelListener [_ l]))))))
+                   (removeTableModelListener [_ l]))))
+    sp))
 
 
 (defmethod build ::f/textfield

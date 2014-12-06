@@ -31,4 +31,6 @@
 (defn start! []
   (v/run-view #'table-view
               #'table-view-handler
-              {:contacts [{:name "foo" :street "bar" :city "baz"}]}))
+              {:contacts [{:name "foo" :street "bar" :city "baz"}
+                          {:name "foo" :street "bar" :city "baz"}
+                          {:name "foo" :street "bar" :city "baz"}]}))

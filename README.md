@@ -6,7 +6,7 @@ Here's a working [example](src/async_ui/ex_master_detail.clj).
 
 ## What it shows
 
- * A UI form with all it's state represented by pure data.
+ * A UI form with all its state represented by pure data.
  * Specification of UI forms and event processing is free of access to
    JavaFX APIs, and can therefore be tested without any GUI test robots.
  * Event processing and communication among UI forms is free of
@@ -166,6 +166,23 @@ A *Toolkit* provides uniform access to functionalities of Swing or JavaFX.
     "Updates the error state of a visual component according to the messages seq msgs.
   Empty msgs remove the error state."))
 ```
+
+## Adding visual component types
+
+This prototype supports only a small number of component types.  To
+add support for a type of visual component one has to add at least one
+datatype in src/async_ui/forml.clj with corresponding defaults.
+
+To support a type of visual component within a specific toolkit there
+are three methods to add:
+
+* `build` in builder.clj that produces a component instance from the
+  spec.
+* `bind!` in binding.clj that registers event listeners that put
+  events to the views `:events` channel.
+* `setter-fns` in binding.clj that returns a map of component specific
+  functions that update a property of component from a value.
+
 
 ## Usage
 

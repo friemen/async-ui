@@ -1,7 +1,7 @@
 (ns async-ui.swing.binding
   (:require [clojure.core.async :refer [put!]]
             [async-ui.core :refer [make-event]])
-  (:import [javax.swing JButton JComponent JFrame JLabel JList JPanel JTable JTextField]
+  (:import [javax.swing JButton JComponent JFrame JLabel JList JPanel JScrollPane JTable JTextField]
            [javax.swing.text JTextComponent]
            [java.awt Container]
            [java.awt.event ActionListener WindowListener]
@@ -103,6 +103,20 @@
 ;; Connect callbacks that write to the events channel of the view
 
 
+(defn- bind-selection-listener!
+  [vc events-chan]
+  (let [sel-model (.getSelectionModel vc)
+        l         (reify ListSelectionListener
+                    (valueChanged [_ evt]
+                      (when-not (.getValueIsAdjusting evt)
+                        (let [sel (vec (range (.getMinSelectionIndex sel-model)
+                                                    (inc (.getMaxSelectionIndex sel-model))))
+                              sel (if (= [-1] sel) [] sel)]
+                          (put! events-chan (make-event (.getName vc) :selection :update sel))))))]
+    (.addListSelectionListener sel-model l)
+    (.putClientProperty vc :listener l)))
+
+
 (defmulti bind!
   "Binds listeners to all components of the visual component tree vc.
   Each listener puts an event onto the channel."
@@ -137,13 +151,7 @@
 
 (defmethod bind! JList
   [vc events-chan]
-  (let [l (reify ListSelectionListener
-            (valueChanged [_ evt]
-              (when-not (.getValueIsAdjusting evt)
-                (put! events-chan (make-event (.getName vc) :selection :update [(.getSelectedIndex vc)])))))]
-    (doto vc
-      (.addListSelectionListener l)
-      (.putClientProperty :listener l))))
+  (bind-selection-listener! vc events-chan))
 
 
 (defmethod bind! JPanel
@@ -158,15 +166,25 @@
     (.getText doc 0 (.getLength doc))))
 
 
+(defmethod bind! JScrollPane
+  [vc events-chan]
+  (bind! (-> vc .getViewport .getView) events-chan))
+
+
+(defmethod bind! JTable
+  [vc events-chan]
+  (bind-selection-listener! vc events-chan))
+
+
 (defmethod bind! JTextComponent
   [vc events-chan]
   (let [l (reify DocumentListener
-         (insertUpdate [_ evt]
-           (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))
-         (removeUpdate [_ evt]
-           (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))
-         (changedUpdate [_ evt]
-           (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt)))))]
+            (insertUpdate [_ evt]
+              (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))
+            (removeUpdate [_ evt]
+              (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt))))
+            (changedUpdate [_ evt]
+              (put! events-chan (make-event (.getName vc) :text :update (text-from-event evt)))))]
     (-> vc
         .getDocument
         (.addDocumentListener l))
