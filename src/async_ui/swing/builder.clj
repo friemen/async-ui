@@ -2,7 +2,9 @@
   "Swing UI builder"
   (:require [async-ui.forml :as f]
             [metam.core :refer [metatype metatype?]])
-  (:import [javax.swing JButton JFrame JLabel JList JPanel JTable JScrollPane JTextField]
+  (:import [javax.swing AbstractListModel
+            JButton JFrame JLabel JList JPanel JTable JScrollPane JTextField
+            ListSelectionModel]
            [javax.swing.table DefaultTableCellRenderer DefaultTableColumnModel
             TableColumn TableCellRenderer TableModel]
            [javax.swing DefaultListModel]
@@ -45,7 +47,11 @@
   (let [l  (make JList spec)
         sp (JScrollPane. l)]
     (doto l
-      (.setModel (DefaultListModel.)))
+      (.setModel (proxy [AbstractListModel] []
+                   (getSize []
+                     (-> l (.getClientProperty :data) count))
+                   (getElementAt [row]
+                     (-> l (.getClientProperty :data) (nth row))))))
     sp))
 
 
@@ -69,6 +75,7 @@
     (doto t
       (.setColumnModel (table-column-model (-> spec :columns)))
       (.setAutoCreateColumnsFromModel false)
+      (.setSelectionMode ListSelectionModel/SINGLE_SELECTION)
       (.setModel (reify TableModel
                    (getColumnClass [_ column]
                      java.lang.String)

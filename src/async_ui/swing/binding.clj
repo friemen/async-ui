@@ -17,52 +17,54 @@
   {:enabled #(.setEnabled vc (if (nil? %) false %))
    :visible #(.setVisible vc (if (nil? %) false %))})
 
+
+(defn- set-selection!
+  [vc index]
+  (let [m (.getSelectionModel vc)
+        l (.getClientProperty vc :listener)]
+    (doto m
+      (.removeListSelectionListener l)
+      (.setSelectionInterval index index)
+      (.addListSelectionListener l))))
+
+
 (defmulti setter-fns
   "Returns a map from keyword to 1-arg function for the given visual component.
   Each function is used to update a property of the visual component with the 
   given formatted value."
   class)
 
+
 (defmethod setter-fns :default
   [vc]
   {})
+
 
 (defmethod setter-fns JButton
   [vc]
   (assoc (common-setter-fns vc)
     :text #(.setText vc %)))
 
+
 (defmethod setter-fns JFrame
   [vc]
   (assoc (common-setter-fns vc)
     :title #(.setTitle vc %)))
+
 
 (defmethod setter-fns JLabel
   [vc]
   (assoc (common-setter-fns vc)
     :text #(.setText vc %)))
 
-(defn set-list-items!
-  [vc items]
-  (let [m (.getModel vc)
-        l (.getClientProperty vc :listener)
-        s (.getSelectedIndex vc)]
-    (.removeListSelectionListener vc l)
-    (.clear m)
-    (doseq [i items]
-      (.addElement m i))
-    (.setSelectedIndex vc s)
-    (.addListSelectionListener vc l)))
-
 
 (defmethod setter-fns JList
   [vc]
   (assoc (common-setter-fns vc)
-    :selection #(let [l (.getClientProperty vc :listener)]
-                  (.removeListSelectionListener vc l)
-                  (.setSelectedIndex vc (or (first %) 0))
-                  (.addListSelectionListener vc l))
-    :items (partial set-list-items! vc)))
+    :selection #(set-selection! vc (or (first %) 0))
+    :items     #(do (.putClientProperty vc :data %)
+                    (let [m (.getModel vc)]
+                      (.fireContentsChanged m m 0 (count %))))))
 
 
 (defmethod setter-fns JPanel
@@ -73,8 +75,9 @@
 (defmethod setter-fns JTable
   [vc]
   (assoc (common-setter-fns vc)
-    :items #(do (.putClientProperty vc :data %)
-                (.repaint vc))))
+    :selection #(set-selection! vc (or (first %) 0))
+    :items     #(do (.putClientProperty vc :data %)
+                    (.repaint vc))))
 
 
 (defn- set-text!
@@ -189,7 +192,4 @@
         .getDocument
         (.addDocumentListener l))
     (.putClientProperty vc :listener l)))
-
-
-
 

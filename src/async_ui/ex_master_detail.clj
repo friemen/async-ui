@@ -104,6 +104,7 @@
                ys
                (drop (inc n) xs))))
 
+
 (defn item-manager-handler
   [view event]
   (go (assoc view
