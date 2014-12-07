@@ -273,12 +273,13 @@
       (go-loop []
         (try (let [view-msg  (<! @tk-ch)]
                (if-not (= :quit view-msg)
-                 (do (try (let [view-id      (log "run-tk: Got view" (:id view-msg))
-                                current-view (get @views view-id)
-                                new-view     (assoc (merge current-view view-msg)
-                                               :vc         (:vc current-view)
-                                               :setter-fns (:setter-fns current-view))]
-                            (synchronize-ui! tk current-view new-view))
+                 (do (try (let [[old-view view] view-msg
+                                view-id         (log "run-tk: Got view" (:id view))
+                                current-view    (get @views view-id)
+                                new-view        (assoc (merge current-view view)
+                                                  :vc         (:vc current-view)
+                                                  :setter-fns (:setter-fns current-view))]
+                            (synchronize-ui! tk old-view new-view))
                           (catch Exception ex
                             (.printStackTrace ex)))
                      (recur))
@@ -286,8 +287,10 @@
                      (close! @tk-ch)
                      (reset! tk-ch nil)
                      :quit)))))
-      (log "run-tk: Started"))
-    (log "run-tk: Already running")))
+      (log "run-tk: Started")
+      :running)
+    (do (log "run-tk: Already running")
+        :running)))
 
 
 (defn stop-tk
@@ -336,13 +339,14 @@
   (add-watch view-factory-var
              :rebuild
              (fn [k r o new-factory]
-               (put! @tk-ch (let [new-view (new-factory initial-data)
-                                 old-view (@views (:id new-view))]
-                             (assoc new-view
-                               :rebuild true
-                               :events (:events old-view)
-                               :vc (:vc old-view)
-                               :data (:data old-view)))))))
+               (let [new-view (new-factory initial-data)
+                     old-view (@views (:id new-view))]
+                 (put! @tk-ch [old-view (assoc new-view
+                                          :rebuild true
+                                          :events (:events old-view)
+                                          :vc (:vc old-view)
+                                          :data (:data old-view))])))))
+
 
 (defn run-view
   "Asynchronous process that waits for events on the views :events channel,
@@ -352,16 +356,19 @@
   [view-factory-var handler-fn-var initial-data]
   {:pre [@tk-ch]}
   (install-automatic-rebuild! view-factory-var initial-data)
-  (go-loop [view (@view-factory-var initial-data)]
+  (go-loop [old-view nil
+            view     (@view-factory-var initial-data)]
     (let [view-id (:id view)]
-      (>! @tk-ch view)
+      (>! @tk-ch [old-view view])
       (if-not (:terminated view)
-        (let [event (log "run-view" view-id ": Got event" (<! (:events view)))
-              new-view (<! (@handler-fn-var (update-view view event) event))]
+        (let [event    (<! (:events view))
+              _        (log "run-view" view-id ": Got event" event)
+              view     (update-view view event)
+              new-view (<! (@handler-fn-var view event))]
           (log "run-view" view-id
                "Data" (:data new-view)
                "Validation Result" (e/messages (:validation-results new-view)))
-          (recur new-view))
+          (recur view new-view))
         (do
           (log "run-view" view-id ": Terminating process")
           (remove-watch view-factory-var :rebuild)
