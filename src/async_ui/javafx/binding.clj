@@ -34,8 +34,8 @@
     :selection #(without-listener vc [.getSelectionModel .getSelectedIndices] :selection-listener
                                   (-> vc .getSelectionModel
                                       (.selectIndices (or (first %) -1) (int-array (rest %)))))
-    :items #(without-listener vc [.getSelectionModel .getSelectedIndices] :selection-listener
-                              (.setItems vc (FXCollections/observableArrayList %)))))
+    :items     #(without-listener vc [.getSelectionModel .getSelectedIndices] :selection-listener
+                                  (.setItems vc (FXCollections/observableArrayList %)))))
 
 
 (defmulti setter-fns

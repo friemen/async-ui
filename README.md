@@ -186,10 +186,33 @@ are three methods to add:
 
 ## Usage
 
-* Make sure you're on JDK 1.8.0_25.
-* Clone this project
-* Open the file `src/async_ui/ex_master_detail.clj` and compile it
+Make sure you're on JDK 1.8.0_25. Clone this project.
+
+### REPL
+
+* Open the file `src/async_ui/ex_master_detail.clj` and compile it.
 * `(do (ns async-ui.ex-master-detail) (start!))`
+
+### Standalone
+
+You can run the application using `lein run`.
+
+Alternatively you can create an all-in-one Jar using `lein uberjar`
+and execute the resulting Jar (`java -jar ...`).
+
+NOTE: For some weird technical reasons JavaFX needs to have its
+Application Thread started for some of the classes to be loaded
+properly. In other words, the compilation process starts a JavaFX
+thread, which blocks JVM termination after compilation finished. As a
+remedy, an environment var in the uberjar profile is used to detect
+compilation and a `Platform/exit` is issued after some seconds, but
+termination still takes about 1 minute. Be patient.
+
+NOTE: If you start the Jar from the project directory with
+`java -jar target/async-ui-0.1.0-SNAPSHOT-standalone.jar` make sure
+you delete .lein-env beforehand.
+
+Currently there is no proper application exit. Ctrl-C helps.
 
 
 ## License

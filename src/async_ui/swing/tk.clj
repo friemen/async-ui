@@ -27,8 +27,8 @@
             (-> % .getViewport .getView)
             %)
          (condp = (class vc)
-           JFrame       [(.getContentPane vc)]
-           JPanel       (.getComponents vc)
+           JFrame [(.getContentPane vc)]
+           JPanel (.getComponents vc)
            [])))
   (vc-name [tk vc]
     (.getName vc))

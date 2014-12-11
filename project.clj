@@ -8,9 +8,14 @@
                  [metam/core "1.0.5"]
                  [parsargs "1.2.0"]
                  [examine "1.2.0"]
+                 [environ "1.0.0"]
                  ;; Swing
                  [com.miglayout/miglayout-swing "5.0-SNAPSHOT"]
                  ;; JavaFX
                  [com.miglayout/miglayout-javafx "5.0-SNAPSHOT"]]
+  :main async-ui.main
+  :plugins [[lein-environ "1.0.0"]]
+  :profiles {:uberjar {:aot :all
+                       :env {:javafx-exit true}}}
   :repositories [["sonatype" {:url "https://oss.sonatype.org/content/repositories/snapshots"
                               :snapshots true}]])

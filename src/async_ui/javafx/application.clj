@@ -1,6 +1,6 @@
 (ns async-ui.javafx.application
   "JavaFX Startup utilities"
-  (:import [javafx.application Platform Application])
+  (:import [javafx.application Application])
   (:gen-class
    :extends javafx.application.Application))
 

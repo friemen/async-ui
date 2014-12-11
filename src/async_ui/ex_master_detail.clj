@@ -10,9 +10,15 @@
 
 ; ----------------------------------------------------------------------------
 ;; TODOs
+;; - Replace tk/bind-vc-tree with tk/setters and tk/bind-events!
+;; - Replace tk/build-vc-tree with tk/build
+;; - Consider if build should do a diff+merge
+;; - view setter-fns should contain property-path -> setter as well as data-path -> setter
+;; - Instead of tk/set-vc-error use a setter-fn for a :message
 ;; - Demonstrate testing support with event recording and play-back
-;; - Validation message display
-;; - Modality between windows
+;; - Improve interactive development
+;; - Properly display validation messages
+;; - Introduce modality between windows
 
 ; ----------------------------------------------------------------------------
 ;; In the REPL:
@@ -161,5 +167,4 @@
               #'item-manager-handler
               {:item ""
                :items (vec (take 100 (repeatedly #(rand-nth ["Foo" "Bar" "Baz"]))))}))
-
 

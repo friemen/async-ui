@@ -237,7 +237,7 @@
          (:validation-results view)
          (:vc view)]}
   (let [msg-map  (into {}
-                       (for [{data-path :data-path property-path :property-path} (:mapping view),
+                       (for [{:keys [data-path property-path]} (:mapping view),
                              :let [msgs (-> view :validation-results e/messages (get data-path))]]
                          [property-path msgs]))
         comp-map (component-map tk (:vc view))]
@@ -341,11 +341,12 @@
              (fn [k r o new-factory]
                (let [new-view (new-factory initial-data)
                      old-view (@views (:id new-view))]
-                 (put! @tk-ch [old-view (assoc new-view
-                                          :rebuild true
-                                          :events (:events old-view)
-                                          :vc (:vc old-view)
-                                          :data (:data old-view))])))))
+                 (put! @tk-ch [(dissoc old-view :data)
+                               (assoc new-view
+                                 :rebuild true
+                                 :events (:events old-view)
+                                 :vc (:vc old-view)
+                                 :data (:data old-view))])))))
 
 
 (defn run-view
