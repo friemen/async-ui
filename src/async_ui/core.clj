@@ -7,7 +7,7 @@
 ; ------------------------------------------------------------------------------
 ;; Utilities
 
-(def logging-on false)
+(def logging-on true)
 
 (defn log [& xs] (when logging-on (apply println xs)) (last xs))
 
@@ -194,7 +194,7 @@
 ;; Toolkit process
 
 (defn- shutdown-view!
-  "Hides a view, closes it's :events channel."
+  "Hides a view, closes its :events channel."
   [tk view]
   (log "run-tk: Shutting down view" (:id view))
   (close! (:events view))

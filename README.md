@@ -195,10 +195,9 @@ Make sure you're on JDK 1.8.0_25. Clone this project.
 
 ### Standalone
 
-You can run the application using `lein run`.
-
-Alternatively you can create an all-in-one Jar using `lein uberjar`
-and execute the resulting Jar (`java -jar ...`).
+* You can run the application using `lein run`.
+* Alternatively you can create an all-in-one Jar using `lein uberjar`
+	and execute the resulting Jar (`java -jar ...`).
 
 NOTE: For some weird technical reasons JavaFX needs to have its
 Application Thread started for some of the classes to be loaded

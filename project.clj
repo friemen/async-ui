@@ -10,9 +10,9 @@
                  [examine "1.2.0"]
                  [environ "1.0.0"]
                  ;; Swing
-                 [com.miglayout/miglayout-swing "5.0-SNAPSHOT"]
+                 [com.miglayout/miglayout-swing "5.0"]
                  ;; JavaFX
-                 [com.miglayout/miglayout-javafx "5.0-SNAPSHOT"]]
+                 [com.miglayout/miglayout-javafx "5.0"]]
   :main async-ui.main
   :plugins [[lein-environ "1.0.0"]]
   :profiles {:uberjar {:aot :all
